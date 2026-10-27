@@ -59,7 +59,14 @@ import {
 } from "@t3tools/contracts";
 import type { OlderSettledScope } from "@t3tools/client-runtime/state/threads";
 
-import { ChevronDownIcon, FolderIcon, ListFilterIcon, PlusIcon, SettingsIcon } from "lucide-react";
+import {
+  CheckIcon,
+  ChevronDownIcon,
+  FolderIcon,
+  ListFilterIcon,
+  PlusIcon,
+  SettingsIcon,
+} from "lucide-react";
 import {
   useEffect,
   useLayoutEffect,
@@ -2829,20 +2836,17 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                     <ComboboxList aria-multiselectable>
                       {(item: (typeof projectScopeItems)[number]) => {
                         const project = projectGroupByScopeKey.get(item.value) ?? null;
+                        const isSelected = project
+                          ? projectScopeKeys.includes(item.value)
+                          : projectScopeKeys.length === 0;
                         return (
                           <ComboboxItem
                             key={item.value}
                             hideIndicator
                             value={item}
-                            {...(project
-                              ? {
-                                  "aria-selected": projectScopeKeys.includes(item.value),
-                                  // Base UI marks one value; several selected projects share its look.
-                                  ...(projectScopeKeys.includes(item.value)
-                                    ? { "data-selected": "" }
-                                    : {}),
-                                }
-                              : {})}
+                            aria-selected={isSelected}
+                            // The trailing check marks selection; Base UI's single value would shade one row.
+                            data-selected={undefined}
                             onContextMenu={(event) => {
                               if (project) handleProjectSettings(event, project);
                             }}
@@ -2876,6 +2880,10 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                                 <SettingsIcon className="size-3.5" />
                               </Button>
                             ) : null}
+                            <CheckIcon
+                              className={cn("size-3.5", !isSelected && "invisible")}
+                              aria-hidden="true"
+                            />
                           </ComboboxItem>
                         );
                       }}

@@ -1636,6 +1636,18 @@ export const makeCodexAdapterV2 = Effect.fn("makeCodexAdapterV2")(function* (
   const { clientFactory, crypto, fileSystem, idAllocator, serverConfig } = adapterOptions;
   const continuationRequests = adapterOptions.continuationRequests;
 
+  const resolveCodexRuntimePolicy = Effect.fn("CodexAdapterV2.resolveCodexRuntimePolicy")(
+    function* (policy: ProviderAdapter.ProviderAdapterV2RuntimePolicy) {
+      const cwd = policy.cwd;
+      // Windows realpath can rewrite mapped drives to network paths; preserve that platform's cwd.
+      if (cwd === null || (yield* HostProcess.Platform) === "win32") return policy;
+      return {
+        ...policy,
+        cwd: yield* fileSystem.realPath(cwd).pipe(Effect.orElseSucceed(() => cwd)),
+      };
+    },
+  );
+
   return ProviderAdapter.ProviderAdapterV2.of({
     instanceId: adapterOptions.instanceId,
     driver: CODEX_PROVIDER,
@@ -6490,7 +6502,7 @@ export const makeCodexAdapterV2 = Effect.fn("makeCodexAdapterV2")(function* (
             const turnStartParams = yield* buildCodexTurnStartParams({
               nativeThreadId: threadId,
               codexInput,
-              runtimePolicy: turnInput.runtimePolicy,
+              runtimePolicy: yield* resolveCodexRuntimePolicy(turnInput.runtimePolicy),
               modelSelection: turnInput.modelSelection,
               hasT3Mcp: mcpSession !== undefined,
               browserToolsAvailable: mcpSession?.browserToolsAvailable ?? true,
@@ -6774,8 +6786,9 @@ export const makeCodexAdapterV2 = Effect.fn("makeCodexAdapterV2")(function* (
             }
             return false;
           }),
-          ensureThread: (threadInput) =>
-            ensureInitialized.pipe(
+          ensureThread: Effect.fn("CodexAdapterV2.ensureThread")(function* (threadInput) {
+            const runtimePolicy = yield* resolveCodexRuntimePolicy(threadInput.runtimePolicy);
+            return yield* ensureInitialized.pipe(
               Effect.andThen(mcpSessions.read(threadInput.threadId)),
               Effect.flatMap((mcpSession) =>
                 client.request(
@@ -6783,7 +6796,7 @@ export const makeCodexAdapterV2 = Effect.fn("makeCodexAdapterV2")(function* (
                   codexThreadRuntimeParams({
                     mcpSession,
                     modelSelection: threadInput.modelSelection,
-                    runtimePolicy: threadInput.runtimePolicy,
+                    runtimePolicy,
                   }),
                 ),
               ),
@@ -6805,7 +6818,8 @@ export const makeCodexAdapterV2 = Effect.fn("makeCodexAdapterV2")(function* (
                     cause: normalizeCodexCause(cause),
                   }),
               ),
-            ),
+            );
+          }),
           resumeThread: Effect.fn("CodexAdapterV2.resumeThread")(
             function* (threadInput) {
               const nativeThreadId = yield* getNativeThreadId(threadInput.providerThread);
@@ -6822,7 +6836,9 @@ export const makeCodexAdapterV2 = Effect.fn("makeCodexAdapterV2")(function* (
                     : { modelSelection: threadInput.modelSelection }),
                   ...(threadInput.runtimePolicy === undefined
                     ? {}
-                    : { runtimePolicy: threadInput.runtimePolicy }),
+                    : {
+                        runtimePolicy: yield* resolveCodexRuntimePolicy(threadInput.runtimePolicy),
+                      }),
                 }),
               });
               const response = yield* ensureInitialized.pipe(
@@ -7602,7 +7618,7 @@ export const makeCodexAdapterV2 = Effect.fn("makeCodexAdapterV2")(function* (
                   ...codexThreadRuntimeParams({
                     mcpSession: yield* readMcpSession(threadInput.providerThread.appThreadId),
                     modelSelection: input.modelSelection,
-                    runtimePolicy: input.runtimePolicy,
+                    runtimePolicy: yield* resolveCodexRuntimePolicy(input.runtimePolicy),
                   }),
                 });
               }
@@ -7658,7 +7674,11 @@ export const makeCodexAdapterV2 = Effect.fn("makeCodexAdapterV2")(function* (
                         : { modelSelection: threadInput.modelSelection }),
                       ...(threadInput.runtimePolicy === undefined
                         ? {}
-                        : { runtimePolicy: threadInput.runtimePolicy }),
+                        : {
+                            runtimePolicy: yield* resolveCodexRuntimePolicy(
+                              threadInput.runtimePolicy,
+                            ),
+                          }),
                     }),
                   }),
                 ),

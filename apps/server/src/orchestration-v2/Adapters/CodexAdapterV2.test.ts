@@ -1217,7 +1217,13 @@ describe("CodexAdapterV2 post-settle continuation", () => {
               },
             },
           },
-          ...preamble.slice(6).map((entry) => withReplayRequestId(entry, 4)),
+          ...preamble
+            .slice(6)
+            .map((entry) =>
+              entry.type !== "runtime_exit" && Predicate.hasProperty(entry.frame, "id")
+                ? withReplayRequestId(entry, 4)
+                : entry,
+            ),
         ];
         const transcript = yield* decodeReplayTranscriptJson(
           (yield* encodeReplayTranscriptJson(
@@ -1290,7 +1296,13 @@ describe("CodexAdapterV2 post-settle continuation", () => {
               entries:
                 index === 0
                   ? preamble
-                  : preamble.slice(5).map((entry) => withReplayRequestId(entry, 4)),
+                  : preamble
+                      .slice(5)
+                      .map((entry) =>
+                        entry.type !== "runtime_exit" && Predicate.hasProperty(entry.frame, "id")
+                          ? withReplayRequestId(entry, 4)
+                          : entry,
+                      ),
             }),
           )).replaceAll(
             yield* encodeStringJson("/workspace"),

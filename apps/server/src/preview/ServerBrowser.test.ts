@@ -473,7 +473,7 @@ it.live.each(["desktop" as const, undefined])(
     ).pipe(Effect.provide(layer)),
 );
 
-it.live("a tab the desktop does not draw is marked headless, so the desktop streams it", () =>
+it.effect("a tab the desktop does not draw is marked headless, so the desktop streams it", () =>
   Effect.scoped(
     Effect.gen(function* () {
       const { broker, tabId } = yield* ready;

@@ -373,6 +373,7 @@ function SidebarControl() {
 }
 
 export function AppSidebarLayout({ children }: { children: ReactNode }) {
+  const router = useRouter();
   const sidebarArea = useWorkspaceArea("sidebar", 0, "Threads");
   const legacySidebarEnabled = useLegacySidebarEnabled();
   const [sidebarRouteReveal] = useState<SidebarRouteReveal>(() => ({
@@ -451,7 +452,7 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
         {children}
         <BackgroundThreadAnnouncer />
         <SidebarControl />
-        <WorkspaceNavigation />
+        <WorkspaceNavigation readPanelContext={() => readRoutePanelsOpen(router)} />
       </SidebarProvider>
     </PanelAnimationSuppressionProvider>
   );

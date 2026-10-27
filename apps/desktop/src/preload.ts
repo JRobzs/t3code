@@ -2,7 +2,6 @@ import type {
   DesktopBridge,
   DesktopPreviewOpenLinkEvent,
   DesktopPreviewPointerEvent,
-  DesktopPreviewServerTabKey,
   DesktopPreviewRecordingInputEvent,
   DesktopPreviewRecordingFrame,
   DesktopPreviewTabState,
@@ -47,8 +46,7 @@ try {
 const clientPlatform = process.platform;
 
 if (clientPlatform === "darwin") {
-  // Native window buttons do not scale with Chromium zoom. Keep their reserved
-  // space in native points, including when a zoomed page is reloaded.
+  // Native buttons ignore Chromium zoom; reserve native points even after reload.
   const syncWindowControlInset = () => {
     document.documentElement.style.setProperty(
       "--desktop-window-controls-inset",
@@ -431,15 +429,6 @@ contextBridge.exposeInMainWorld("desktopBridge", {
       ipcRenderer.on(IpcChannels.PREVIEW_POINTER_EVENT_CHANNEL, wrappedListener);
       return () =>
         ipcRenderer.removeListener(IpcChannels.PREVIEW_POINTER_EVENT_CHANNEL, wrappedListener);
-    },
-    onCaptureRequest: (listener) => {
-      const wrappedListener = (_event: Electron.IpcRendererEvent, key: unknown) => {
-        if (typeof key !== "object" || key === null) return;
-        listener(key as DesktopPreviewServerTabKey);
-      };
-      ipcRenderer.on(IpcChannels.PREVIEW_CAPTURE_REQUEST_CHANNEL, wrappedListener);
-      return () =>
-        ipcRenderer.removeListener(IpcChannels.PREVIEW_CAPTURE_REQUEST_CHANNEL, wrappedListener);
     },
     onOpenLink: (listener) => {
       const wrappedListener = (_event: Electron.IpcRendererEvent, linkEvent: unknown) => {
